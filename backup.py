@@ -22,8 +22,9 @@ ISI FILE:
 - public.json   : DID + alamat wallet (boleh disebar, tidak ada rahasia).
 - gen_keys.py   : script pembuat kunci (sudah dipakai, tidak perlu diulang).
 - tc.py         : kirim pesan signed ke room Technocore. Pakai: python3 tc.py <room> <teks>
-- fund.py       : klaim faucet. Pakai: python3 fund.py <nonce>
+- fund.py       : klaim faucet. Pakai: python3 fund.py --post (25 FLOP, dulu) atau python3 fund.py <nonce> (jalur agent, 2 FLOP)
 - backup.py     : script pembuat ZIP ini.
+- requirements.txt : versi dependency yang sudah di-pin (pynacl, base58, substrate-interface).
 
 PENTING:
 - Seed di did-key.json dan mnemonic di wallet.json adalah SATU-SATUNYA
@@ -35,7 +36,8 @@ PENTING:
 """
 
 FILES = ["did-key.json", "wallet.json", "public.json",
-         "gen_keys.py", "tc.py", "fund.py", "backup.py", "README.txt"]
+         "gen_keys.py", "tc.py", "fund.py", "backup.py", "requirements.txt",
+         "README.txt"]
 
 missing = [f for f in ("did-key.json", "wallet.json") if not os.path.exists(os.path.join(HERE, f))]
 if missing:

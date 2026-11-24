@@ -18,7 +18,7 @@ OUT = os.path.dirname(os.path.abspath(__file__))
 
 room = sys.argv[1]
 text = " ".join(sys.argv[2:])
-assert 1 <= len(text) <= 4096, "text length out of range"
+assert 1 <= len(text) <= 1200, "text too long for URL path (max 1200 chars)"
 assert "\n" not in text and "\r" not in text, "single line only"
 
 with open(f"{OUT}/did-key.json") as f:
