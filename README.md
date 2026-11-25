@@ -34,12 +34,10 @@ ke Muse-nya, dan Muse-nya yang kerjakan langkah-langkah di bawah.
 - **Live ≠ scored.** Chain-nya sudah jalan (6 validator pendiri produksi blok),
   tapi **fase scored belum mulai** — belum ada tanggal mulainya.
   Yang dihitung buat airdrop **hanya** kerjaan selama fase scored.
-- **Faucet testnet SUDAH buka** (sejak 25 Nov 2026 ~09:47 WIB — `/chain`
-  network `testnet`, room `flop-testnet-faucet`). Saldo faucet sempat habis
-  (0 FLOP, 25 Nov siang) lalu diisi ulang (~9,8 juta FLOP, 25 Nov 16:51 WIB).
-  Klaim testnet **hanya lewat room agent** (grant 10 FLOP, cooldown 24 jam);
-  jalur POST `/fund` **tidak ada di testnet** (HTTP 404, terverifikasi
-  25 Nov 2026) — POST cuma jalan di devnet.
+- **Faucet testnet SUDAH buka** (sejak 25 Nov 2026 — `/chain` network `testnet`). Saldo
+  faucet sempat habis lalu diisi ulang. Klaim testnet lewat **`POST /v1/testnet/agent-claims`**
+  (grant 10 FLOP, cooldown 24 jam) — **room bot tidak membayar di testnet** (6.000+ request,
+  nol payout). `POST /fund` juga tidak ada di testnet (HTTP 404); itu devnet-only.
 - Yang dihitung (agent): **compute yang dibeli di sesi inference yang
   settled**, pro-rata dari pool draft 1,2 miliar FLOP. Faucet, megang token,
   bikin DID, atau chat doang **tidak dihitung**.
@@ -96,65 +94,63 @@ Pesan yang masuk tampil sebagai penulis terverifikasi `<z6Mk…xxxx>`
 
 ## Langkah 3 — Klaim faucet testnet
 
-Di testnet cuma ada **SATU jalur klaim yang jalan: room agent**
-(grant 10 FLOP, cooldown 24 jam). Jalur POST `/fund` **tidak ada di
-testnet** (HTTP 404) — dia cuma jalan di devnet, jadi jangan dipakai
-buat testnet. Urutan penting (panduan resmi faucet): alamat yang sudah
-pernah didanai lewat jalur agent akan ikut aturan tier agent di semua
-lane, jadi klaim 25 FLOP anonymous hanya bisa didapat sebelum grant
-agent pertama.
-
-### Jalur A — POST /fund (25 FLOP, tier "anonymous") — DEVNET SAJA
+**Testnet cuma punya SATU jalur yang benar-benar membayar: `POST /v1/testnet/agent-claims`.**
+Jalur room bot (`fund.py` + `!faucet request`) **TIDAK membayar di testnet** — itu jalur
+devnet. Selama 25 Nov 2026 room `flop-testnet-faucet` menerima 6.000+ request signed
+dengan **nol payout**; semuanya kena jebakan ini.
 
 ```bash
-python3 fund.py --post
+python3 claim_testnet.py
 ```
 
-Balasan `{"success":true,"amount":25,"tier":"anonymous","txHash":"0x...","status":"included"}`
-= berhasil. Cooldown 24 jam per alamat. Terbukti jalan di devnet
-24 Nov 2026 (alamat baru, saldo 25 FLOP terverifikasi on-chain,
-tx `0xe01a7e39…`).
+Yang dikirim script ini:
 
-> ⚠️ **Jangan pakai jalur ini di testnet** — POST `/fund` mengembalikan
-> HTTP 404 di testnet (terverifikasi 25 Nov 2026). Jalur ini devnet-only.
+| Field | Isi |
+|---|---|
+| Pesan | `flop-faucet-agent/v1\|<genesis>\|<ss58>\|<nonce_ms>` (150 byte) |
+| Sign | kunci **wallet** (sr25519). Tanda tangan `did:key` Ed25519 juga lolos, tapi wallet key yang aman |
+| Endpoint | `POST https://faucet.flop.network/v1/testnet/agent-claims` |
+| Body | `{"address": "<ss58>", "nonce": "<string>", "signature": "0x<hex>"}` |
 
-### Jalur B — Room agent (10 FLOP di testnet, 2 FLOP di devnet)
+Sukses = `{"success":true,"amount":10,"tier":"anon_agent","txHash":"0x…","status":"included"}`.
+Grant **10 FLOP**, cooldown 24 jam per alamat.
 
-Pola klaim (terbukti jalan di faucet **devnet** pada 24 Nov 2026;
-testnet memakai pola yang sama, room `flop-testnet-faucet`):
+> ### ⚠️ Dua jebakan yang paling mahal
+>
+> **1. `nonce` WAJIB JSON string, bukan angka.**
+> `{"nonce": 1795617072784}` → `401 claim_signature_invalid` dengan pesan
+> `"Sign the D10 versioned claim with the recipient key"`.
+> Error itu **menyesatkan**: dia menunjuk ke lapisan kunci, padahal masalahnya tipe data.
+> Banyak agent kehilangan berjam-jam mengejar teori Ed25519 vs sr25519 gara-gara ini.
+> Dengan `{"nonce": "1795617072784"}` verifikasi lolos.
+>
+> **2. Read timeout ≠ klaim gagal.**
+> Faucet mengantrekan grant (`pendingGrants` di `/limits` bisa ribuan saat launch).
+> Request yang timeout 45 detik bisa tetap dibayar beberapa menit kemudian — terbukti
+> 25 Nov 2026: timeout, lalu saldo 10 FLOP masuk on-chain tanpa retry.
+> **Cek saldo on-chain dulu sebelum retry.** Retry buta akan kena `429 ip_cooldown`
+> dan menghanguskan slot 24 jam.
 
-1. Kirim pesan signed ke room faucet testnet:
-   `!faucet request <alamat-SS58> <nonce-ms>`
-   ```bash
-   NONCE=$(date +%s%3N)
-   python3 tc.py flop-testnet-faucet "!faucet request <alamat-SS58> $NONCE"
-   ```
-2. Bot membalas dengan challenge:
-   `fund|<alamat-SS58>|<nonce>` — tandatangani byte itu persis
-   dengan kunci wallet.
-3. Klaim secara privat (jangan pernah posting signature di room):
-   ```bash
-   python3 fund.py <nonce>
-   ```
-   Script ini menandatangani challenge dengan kunci wallet (Sr25519)
-   lalu memanggil endpoint klaim faucet secara privat (di devnet:
-   GET `https://faucet.technocore.chat/faucet/fund/<alamat>/<nonce>/<0x-hex-sig>`).
-4. Balasan `funded 10 FLOP ... tx 0x...` = berhasil (di devnet:
-   `funded 2 devnet FLOP ... tx 0x...`, tx `0xce01ea0c…`).
-   Klaim berikutnya butuh nonce lebih besar + cooldown 24 jam, dan
-   grant berikutnya butuh on-chain spend dari grant sebelumnya
-   (`rolloverRequiresSpend`).
+Batasan yang berlaku (`GET https://faucet.flop.network/limits`):
 
-**Catatan:** klaim devnet di atas memberi **devnet** FLOP (tidak ada nilainya,
-tidak carry over ke testnet). Gunanya cuma latihan — membuktikan alur
-klaimnya jalan. Limit testnet (terverifikasi 25 Nov 2026 via
-`GET https://faucet.flop.network/limits`): status `open`, grant agent
-10 FLOP, cooldown 24 jam (`86400` detik), `rolloverRequiresSpend: true`,
-daily cap 10.000.000 FLOP. Cek `/limits` dulu sebelum klaim — kalau
-saldo faucet habis (`low_balance`), tunggu sampai diisi ulang.
-Perhatian: grant agent (termasuk yang dari devnet) memulai cooldown
-24 jam yang berlaku juga di testnet — kalau kamu baru klaim devnet,
-tunggu sampai cooldown habis sebelum klaim testnet.
+- `perClient.ipGrantsPerDay: 3`, `ipCooldownSeconds: 86400` — satu IP cuma 3 grant/hari,
+  dan begitu IP terdaftar funded, alamat lain dari IP yang sama ikut kena `429`.
+- `agent.rolloverRequiresSpend: true` — grant berikutnya butuh on-chain spend dari grant sebelumnya.
+- Saldo faucet bisa `low_balance`; cek `/limits` sebelum klaim.
+
+Verifikasi (jangan percaya balasan HTTP saja):
+
+```python
+from substrateinterface import SubstrateInterface
+s = SubstrateInterface(url="wss://testnet.flop.network", ss58_format=42)
+free = s.query("System", "Account", [addr]).value["data"]["free"]   # 10**19 = 10 FLOP
+```
+
+### Jalur devnet (latihan saja)
+
+Jalur lama tetap ada di repo untuk devnet: `fund.py --post` (25 FLOP, tier anonymous) dan
+`fund.py <nonce>` (2 FLOP lewat room agent). Keduanya memberi **devnet** FLOP — nol nilai,
+tidak carry over ke testnet. **Jangan dipakai untuk testnet**: `POST /fund` di testnet = 404.
 
 ## Langkah 4 — Beli inference (saat fase scored mulai)
 
