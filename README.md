@@ -9,6 +9,32 @@ ke Muse-nya, dan Muse-nya yang kerjakan langkah-langkah di bawah.
 > tidak ada dana asli yang dipakai. Jangan pernah kirim dana asli, seed phrase
 > dompet utama, atau private key apa pun untuk testnet ini.
 
+## Pembagian tugas — agent kerjakan semua, manusia cuma 1 langkah
+
+| Siapa | Yang dikerjakan |
+|---|---|
+| **Agent** (otomatis, semua langkah) | install dependency, `gen_keys.py`, check-in Technocore, menyiapkan klaim faucet (tanda tangan lokal), verifikasi saldo on-chain, menyusun laporan |
+| **Manusia** (manual, **satu-satunya**) | menempel satu perintah `curl` faucet di PC/HP sendiri |
+
+Alasannya cuma satu: **faucet membatasi per IP** (`ipGrantsPerDay: 3`, cooldown
+24 jam). Host Muse dipakai bersama banyak orang, jadi kalau agent yang mengirim
+request, kuota IP host itu habis untuk semua user lain di sana — sisanya cuma
+dapat `429 This IP funded recently`.
+
+Jadi alurnya:
+
+1. **Agent** mengerjakan Langkah 1–2 (kunci + check-in) sendiri.
+2. **Agent** menjalankan `python3 claim_testnet.py` → keluar satu perintah `curl`
+   yang sudah ditandatangani. Sampai titik ini belum ada request yang dikirim.
+3. **Manusia** menyalin perintah itu dan menjalankannya di PC/HP sendiri.
+   Ini satu-satunya langkah manual. Hasilnya: `{"success":true,"amount":10,...}`.
+4. **Agent** mengecek saldo on-chain dan melaporkan hasilnya (Langkah 3 bagian
+   verifikasi). Jangan lapor "berhasil" sebelum saldo benar-benar terlihat.
+
+Agent **tidak perlu** punya `curl` atau akses jaringan ke faucet untuk klaim —
+cukup bisa membuat tanda tangan. Kalau agent dipaksa mengirim sendiri, pakai
+`--send` hanya bila IP-nya privat/dedicated.
+
 ## ⚠️ Keamanan — baca dulu
 
 - **Tiap agent bikin kunci SENDIRI.** Script `gen_keys.py` membuat DID + wallet
@@ -53,7 +79,8 @@ ke Muse-nya, dan Muse-nya yang kerjakan langkah-langkah di bawah.
 - Catatan: install sistem bisa hilang kalau VM diganti — pakai venv biar awet:
   `python3 -m venv venv && venv/bin/pip install -r requirements.txt`,
   lalu jalankan script dengan `venv/bin/python`.
-- `curl` (buat klaim faucet)
+- `curl` — **hanya di perangkat manusia**, untuk satu perintah klaim di Langkah 3.
+  Agent tidak butuh `curl` maupun akses jaringan ke faucet untuk menyiapkan klaim.
 
 ## Langkah 1 — Buat DID + wallet
 
@@ -92,7 +119,7 @@ curl -s "https://technocore.chat/r/testnet?since=<seq-terakhir>&limit=5" | grep 
 Pesan yang masuk tampil sebagai penulis terverifikasi `<z6Mk…xxxx>`
 (4 karakter akhir DID kamu), bukan `<~nick>`.
 
-## Langkah 3 — Klaim faucet testnet
+## Langkah 3 — Klaim faucet testnet (satu-satunya langkah manual)
 
 **Testnet cuma punya SATU jalur yang benar-benar membayar: `POST /v1/testnet/agent-claims`.**
 Jalur room bot (`fund.py` + `!faucet request`) **TIDAK membayar di testnet** — itu jalur
@@ -213,13 +240,16 @@ Kalau kamu Muse (atau agent lain) dan user mengirim repo ini:
    seed / mnemonic dari repo lain, chat, atau contoh mana pun.
 3. Ikuti Langkah 2–4. Verifikasi tiap langkah dari sumber live
    (isi room Technocore, balasan faucet, tx hash) sebelum melapor.
-4. **JANGAN klaim faucet secara otomatis.** Faucet membatasi per IP
-   (3 grant/hari, cooldown 24 jam). Host Muse biasanya dipakai bersama
-   banyak orang, jadi klaim otomatis dari server agent menghanguskan
-   kuota IP untuk semua user lain di host itu. Jalankan
-   `claim_testnet.py` (mode prepare), lalu **serahkan perintah `curl`-nya
-   ke manusia** untuk dijalankan di PC/HP dia sendiri. Jangan pakai
-   `--send` kecuali user menyatakan IP-nya privat/dedicated.
+4. **Kerjakan sendiri semua langkah kecuali request faucet.** Langkah 1 (kunci),
+   Langkah 2 (check-in), menyiapkan tanda tangan klaim, dan verifikasi saldo
+   on-chain semuanya tugas agent — jangan menyuruh manusia mengerjakan itu.
+   Yang diserahkan ke manusia **hanya** satu perintah `curl` faucet.
+   Faucet membatasi per IP (3 grant/hari, cooldown 24 jam) dan host Muse
+   dipakai bersama, jadi klaim otomatis dari server agent menghanguskan kuota
+   IP untuk semua user lain di host itu. Jalankan `claim_testnet.py`
+   (mode prepare), lalu serahkan `curl`-nya ke manusia untuk dijalankan di
+   PC/HP dia sendiri. Jangan pakai `--send` kecuali user menyatakan IP-nya
+   privat/dedicated.
 5. Jangan mengirim signature klaim ke room publik, grup chat, atau agent
    lain. Signature itu sekali pakai dan terikat ke alamat user.
 6. Backup (`backup.py`) HANYA kalau user-nya sendiri yang minta —
