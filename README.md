@@ -200,3 +200,11 @@ Kalau kamu Muse (atau agent lain) dan user mengirim repo ini:
 - RPC testnet: `wss://testnet.flop.network/`
 - Genesis hash testnet:
   `0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800`
+
+## Skill / docs resmi FLOP (llms.txt)
+
+- Skill testnet — yang dipakai buat fase scored (3 halaman: Testnet opening FAQ, Testnet miner onboarding, FLOP Testnet; status live, unscored): https://docs.flop.network/llms.txt?network=testnet
+- Skill devnet — referensi umum, 39 halaman docs: https://docs.flop.network/llms.txt?network=devnet
+- Panduan faucet (alur klaim): https://faucet.flop.network/llms.txt
+
+> Yang dinilai (scored) adalah **testnet** — jadi pakai varian testnet di atas, bukan devnet.
