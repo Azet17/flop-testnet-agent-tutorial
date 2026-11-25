@@ -100,8 +100,30 @@ devnet. Selama 25 Nov 2026 room `flop-testnet-faucet` menerima 6.000+ request si
 dengan **nol payout**; semuanya kena jebakan ini.
 
 ```bash
-python3 claim_testnet.py
+python3 claim_testnet.py            # mode default: TIDAK mengirim apa pun
 ```
+
+> ### ⚠️ JANGAN klaim otomatis dari server agent
+>
+> Faucet membatasi **per IP**: `ipGrantsPerDay: 3`, `ipCooldownSeconds: 86400`,
+> `ipRangeGrantsPerDay: 20`. Kalau banyak orang memakai Muse di host yang sama,
+> **agent pertama yang klaim akan menghanguskan kuota IP itu untuk semua orang** —
+> sisanya cuma dapat `429 This IP funded recently` selama 24 jam.
+>
+> Jadi pembagian tugasnya:
+>
+> 1. **Agent** menjalankan `claim_testnet.py` (mode prepare). Script menandatangani
+>    klaim secara lokal lalu mencetak satu perintah `curl` siap pakai. Kunci wallet
+>    tidak pernah keluar dari mesin agent.
+> 2. **Manusia** menyalin perintah `curl` itu dan menjalankannya **di PC atau HP
+>    sendiri**, bukan di server agent. Request-nya keluar dari IP manusia itu,
+>    jadi kuotanya milik dia sendiri.
+>
+> Perintah `curl`-nya sekali pakai (nonce + signature terikat ke alamat itu).
+> Jangan ditempel ke room publik atau grup chat.
+>
+> Kalau kamu memang punya IP privat/dedicated (VPS sendiri, bukan host bersama),
+> `--send` boleh dipakai — tapi default-nya tetap prepare.
 
 Yang dikirim script ini:
 
@@ -191,9 +213,18 @@ Kalau kamu Muse (atau agent lain) dan user mengirim repo ini:
    seed / mnemonic dari repo lain, chat, atau contoh mana pun.
 3. Ikuti Langkah 2–4. Verifikasi tiap langkah dari sumber live
    (isi room Technocore, balasan faucet, tx hash) sebelum melapor.
-4. Backup (`backup.py`) HANYA kalau user-nya sendiri yang minta —
+4. **JANGAN klaim faucet secara otomatis.** Faucet membatasi per IP
+   (3 grant/hari, cooldown 24 jam). Host Muse biasanya dipakai bersama
+   banyak orang, jadi klaim otomatis dari server agent menghanguskan
+   kuota IP untuk semua user lain di host itu. Jalankan
+   `claim_testnet.py` (mode prepare), lalu **serahkan perintah `curl`-nya
+   ke manusia** untuk dijalankan di PC/HP dia sendiri. Jangan pakai
+   `--send` kecuali user menyatakan IP-nya privat/dedicated.
+5. Jangan mengirim signature klaim ke room publik, grup chat, atau agent
+   lain. Signature itu sekali pakai dan terikat ke alamat user.
+6. Backup (`backup.py`) HANYA kalau user-nya sendiri yang minta —
    kirim ZIP-nya ke user itu, jangan ke tempat lain.
-5. Jangan sentuh jalur miner / validator kecuali user memintanya
+7. Jangan sentuh jalur miner / validator kecuali user memintanya
    secara eksplisit. Jangan pernah minta seed phrase / private key
    dompet utama user. Semua yang di sini testnet only.
 
