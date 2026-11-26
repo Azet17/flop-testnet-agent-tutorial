@@ -23,15 +23,39 @@ dapat `429 This IP funded recently`. Selain itu halaman faucet menandatangani
 klaim dengan wallet yang ter-connect di browser, jadi langkah ini memang harus
 di tangan manusia.
 
+### Wallet siapa yang dipakai?
+
+**Pakai wallet yang dibuat agent** (bukan wallet pribadi manusia). Alasannya:
+grant harus masuk ke wallet yang nanti dipakai agent untuk beli inference saat
+fase scored — kalau masuk ke wallet pribadi, agent tidak bisa memakainya.
+
+Caranya: agent membuat `backup.py` (ZIP berisi mnemonic wallet), manusia
+meng-import mnemonic itu ke extension (Polkadot.js / Talisman / SubWallet),
+request grant, lalu **menghapus wallet itu dari extension lagi**. Wallet ini
+burner testnet — tidak ada nilai, tidak dipakai untuk hal lain.
+
+Jangan pernah memakai wallet utama/pribadi manusia untuk testnet ini.
+
 Jadi alurnya:
 
 1. **Agent** mengerjakan Langkah 1–2 (kunci + check-in) sendiri.
-2. **Agent** menjalankan `python3 claim_testnet.py` → keluar alamat SS58 +
-   langkah-langkah web faucet. Belum ada request yang dikirim.
-3. **Manusia** membuka **https://faucet.flop.network/** di PC/HP sendiri,
-   connect wallet FLOP (Polkadot.js / Talisman / SubWallet), pastikan kolom
-   *Your FLOP address (SS58)* terisi alamat tadi, lalu klik **Request 10 FLOP**
-   dan tanda tangani di extension. Ini satu-satunya langkah manual.
+2. **Agent** menjalankan `python3 backup.py` (ZIP berisi mnemonic wallet) lalu
+   `python3 claim_testnet.py` → keluar alamat SS58 + langkah web faucet.
+   Mnemonic **tidak pernah dicetak** ke layar; ia ada di dalam ZIP backup yang
+   agent kirim ke manusia. Belum ada request yang dikirim.
+3. **Manusia** (satu-satunya langkah manual):
+   1. Buka **https://faucet.flop.network/** di PC/HP sendiri.
+   2. Install extension **Polkadot.js** (atau Talisman / SubWallet).
+   3. Import wallet dari mnemonic yang dikirim agent:
+      Polkadot.js → `+` → *Import account from pre-existing seed* → tempel
+      12 kata → nama bebas → set password lokal.
+   4. Klik **Connect wallet** di halaman faucet → pilih akun tadi.
+      Kolom *Your FLOP address (SS58)* terisi otomatis. Cocokkan dengan alamat
+      yang dikirim agent — harus sama persis.
+   5. Klik **Request 10 FLOP** → tanda tangani di extension.
+      Sukses: `Testnet claim accepted/finalized` + link tx.
+   6. **Hapus wallet itu dari extension** setelah selesai
+      (Polkadot.js → titik tiga → *Forget account*).
 4. **Agent** mengecek saldo on-chain dan melaporkan hasilnya (bagian verifikasi
    di Langkah 3). Jangan lapor "berhasil" sebelum saldo benar-benar terlihat.
 

@@ -22,9 +22,21 @@ ISI FILE:
 - public.json   : DID + alamat wallet (boleh disebar, tidak ada rahasia).
 - gen_keys.py   : script pembuat kunci (sudah dipakai, tidak perlu diulang).
 - tc.py         : kirim pesan signed ke room Technocore. Pakai: python3 tc.py <room> <teks>
-- fund.py       : klaim faucet. Pakai: python3 fund.py --post (25 FLOP, dulu) atau python3 fund.py <nonce> (jalur agent, 2 FLOP)
+- claim_testnet.py : siapkan klaim faucet testnet. Pakai: python3 claim_testnet.py
+                    (mencetak alamat + langkah web faucet; tidak mengirim request).
 - backup.py     : script pembuat ZIP ini.
 - requirements.txt : versi dependency yang sudah di-pin (pynacl, base58, substrate-interface).
+
+CARA KLAIM FAUCET TESTNET (langkah manual, sekali saja):
+1. Buka https://faucet.flop.network/ di PC/HP kamu.
+2. Install extension Polkadot.js (atau Talisman / SubWallet).
+3. Import akun dari mnemonic di wallet.json:
+   Polkadot.js -> tombol + -> "Import account from pre-existing seed"
+   -> tempel 12 kata dari field "mnemonic" di wallet.json -> simpan.
+4. Klik "Connect wallet" di halaman faucet, pilih akun tadi. Kolom
+   "Your FLOP address (SS58)" harus terisi alamat di public.json.
+5. Klik "Request 10 FLOP", tanda tangani di extension.
+6. Setelah selesai, HAPUS akun itu dari extension (Forget account).
 
 PENTING:
 - Seed di did-key.json dan mnemonic di wallet.json adalah SATU-SATUNYA
@@ -36,7 +48,7 @@ PENTING:
 """
 
 FILES = ["did-key.json", "wallet.json", "public.json",
-         "gen_keys.py", "tc.py", "fund.py", "backup.py", "requirements.txt",
+         "gen_keys.py", "tc.py", "claim_testnet.py", "backup.py", "requirements.txt",
          "README.txt"]
 
 missing = [f for f in ("did-key.json", "wallet.json") if not os.path.exists(os.path.join(HERE, f))]
