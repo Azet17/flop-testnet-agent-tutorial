@@ -13,23 +13,27 @@ ke Muse-nya, dan Muse-nya yang kerjakan langkah-langkah di bawah.
 
 | Siapa | Yang dikerjakan |
 |---|---|
-| **Agent** (otomatis, semua langkah) | install dependency, `gen_keys.py`, check-in Technocore, menyiapkan klaim faucet (tanda tangan lokal), verifikasi saldo on-chain, menyusun laporan |
-| **Manusia** (manual, **satu-satunya**) | menempel satu perintah `curl` faucet di PC/HP sendiri |
+| **Agent** (otomatis, semua langkah) | install dependency, `gen_keys.py`, check-in Technocore, menyiapkan alamat + petunjuk, verifikasi saldo on-chain, menyusun laporan |
+| **Manusia** (manual, **satu-satunya**) | buka web faucet → connect wallet → klik **Request 10 FLOP** |
 
 Alasannya cuma satu: **faucet membatasi per IP** (`ipGrantsPerDay: 3`, cooldown
 24 jam). Host Muse dipakai bersama banyak orang, jadi kalau agent yang mengirim
 request, kuota IP host itu habis untuk semua user lain di sana — sisanya cuma
-dapat `429 This IP funded recently`.
+dapat `429 This IP funded recently`. Selain itu halaman faucet menandatangani
+klaim dengan wallet yang ter-connect di browser, jadi langkah ini memang harus
+di tangan manusia.
 
 Jadi alurnya:
 
 1. **Agent** mengerjakan Langkah 1–2 (kunci + check-in) sendiri.
-2. **Agent** menjalankan `python3 claim_testnet.py` → keluar satu perintah `curl`
-   yang sudah ditandatangani. Sampai titik ini belum ada request yang dikirim.
-3. **Manusia** menyalin perintah itu dan menjalankannya di PC/HP sendiri.
-   Ini satu-satunya langkah manual. Hasilnya: `{"success":true,"amount":10,...}`.
-4. **Agent** mengecek saldo on-chain dan melaporkan hasilnya (Langkah 3 bagian
-   verifikasi). Jangan lapor "berhasil" sebelum saldo benar-benar terlihat.
+2. **Agent** menjalankan `python3 claim_testnet.py` → keluar alamat SS58 +
+   langkah-langkah web faucet. Belum ada request yang dikirim.
+3. **Manusia** membuka **https://faucet.flop.network/** di PC/HP sendiri,
+   connect wallet FLOP (Polkadot.js / Talisman / SubWallet), pastikan kolom
+   *Your FLOP address (SS58)* terisi alamat tadi, lalu klik **Request 10 FLOP**
+   dan tanda tangani di extension. Ini satu-satunya langkah manual.
+4. **Agent** mengecek saldo on-chain dan melaporkan hasilnya (bagian verifikasi
+   di Langkah 3). Jangan lapor "berhasil" sebelum saldo benar-benar terlihat.
 
 Agent **tidak perlu** punya `curl` atau akses jaringan ke faucet untuk klaim —
 cukup bisa membuat tanda tangan. Kalau agent dipaksa mengirim sendiri, pakai
@@ -79,8 +83,9 @@ cukup bisa membuat tanda tangan. Kalau agent dipaksa mengirim sendiri, pakai
 - Catatan: install sistem bisa hilang kalau VM diganti — pakai venv biar awet:
   `python3 -m venv venv && venv/bin/pip install -r requirements.txt`,
   lalu jalankan script dengan `venv/bin/python`.
-- `curl` — **hanya di perangkat manusia**, untuk satu perintah klaim di Langkah 3.
-  Agent tidak butuh `curl` maupun akses jaringan ke faucet untuk menyiapkan klaim.
+- Browser + wallet extension (Polkadot.js / Talisman / SubWallet) — **hanya di
+  perangkat manusia**, untuk satu langkah klaim di Langkah 3. Agent tidak butuh
+  akses ke faucet sama sekali untuk menyiapkan alamat dan petunjuk.
 
 ## Langkah 1 — Buat DID + wallet
 
@@ -130,34 +135,41 @@ dengan **nol payout**; semuanya kena jebakan ini.
 python3 claim_testnet.py            # mode default: TIDAK mengirim apa pun
 ```
 
-> ### ⚠️ JANGAN klaim otomatis dari server agent
+> ### ⚠️ Klaim lewat web faucet, dari perangkat manusia
 >
 > Faucet membatasi **per IP**: `ipGrantsPerDay: 3`, `ipCooldownSeconds: 86400`,
 > `ipRangeGrantsPerDay: 20`. Kalau banyak orang memakai Muse di host yang sama,
 > **agent pertama yang klaim akan menghanguskan kuota IP itu untuk semua orang** —
 > sisanya cuma dapat `429 This IP funded recently` selama 24 jam.
 >
-> Jadi pembagian tugasnya:
+> Jadi langkahnya:
 >
-> 1. **Agent** menjalankan `claim_testnet.py` (mode prepare). Script menandatangani
->    klaim secara lokal lalu mencetak satu perintah `curl` siap pakai. Kunci wallet
->    tidak pernah keluar dari mesin agent.
-> 2. **Manusia** menyalin perintah `curl` itu dan menjalankannya **di PC atau HP
->    sendiri**, bukan di server agent. Request-nya keluar dari IP manusia itu,
->    jadi kuotanya milik dia sendiri.
+> 1. **Agent** menjalankan `claim_testnet.py`. Script mencetak alamat SS58 +
+>    petunjuk langkahnya. Tidak ada request yang dikirim.
+> 2. **Manusia** membuka **https://faucet.flop.network/** di PC/HP sendiri,
+>    klik **Connect wallet** (Polkadot.js / Talisman / SubWallet), pastikan kolom
+>    *Your FLOP address (SS58)* berisi alamat tadi, lalu klik
+>    **Request 10 FLOP** dan tanda tangani di extension.
 >
-> Perintah `curl`-nya sekali pakai (nonce + signature terikat ke alamat itu).
-> Jangan ditempel ke room publik atau grup chat.
+> **Kenapa harus connect wallet, bukan cuma tempel alamat?** Halaman faucet yang
+> menandatangani klaim (`signRaw` atas `flop-faucet-agent/v1|<genesis>|<alamat>|<nonce>`)
+> memakai wallet yang ter-connect, dan server memverifikasi tanda tangan itu
+> terhadap alamat yang dikirim. Jadi alamat harus wallet yang ada di browser
+> manusia. Kalau wallet itu belum ada di extension, import dulu dari backup
+> (`python3 backup.py`), lalu hapus lagi setelah selesai.
 >
-> Kalau kamu memang punya IP privat/dedicated (VPS sendiri, bukan host bersama),
-> `--send` boleh dipakai — tapi default-nya tetap prepare.
+> Testnet cuma punya satu tier: **Agent claim, 10 FLOP per 24 jam**. Tier
+> "Verified human" berstatus *Unavailable on Testnet*.
+>
+> Kalau agent memang berjalan di IP privat/dedicated (VPS sendiri, bukan host
+> bersama), `python3 claim_testnet.py --send` boleh dipakai.
 
-Yang dikirim script ini:
+Yang dikirim **web faucet** saat manusia klik *Request 10 FLOP* (referensi):
 
 | Field | Isi |
 |---|---|
 | Pesan | `flop-faucet-agent/v1\|<genesis>\|<ss58>\|<nonce_ms>` (150 byte) |
-| Sign | kunci **wallet** (sr25519). Tanda tangan `did:key` Ed25519 juga lolos, tapi wallet key yang aman |
+| Sign | wallet yang ter-connect di browser (`signRaw`, type `bytes`) — kunci **wallet** (sr25519) |
 | Endpoint | `POST https://faucet.flop.network/v1/testnet/agent-claims` |
 | Body | `{"address": "<ss58>", "nonce": "<string>", "signature": "0x<hex>"}` |
 
@@ -241,15 +253,14 @@ Kalau kamu Muse (atau agent lain) dan user mengirim repo ini:
 3. Ikuti Langkah 2–4. Verifikasi tiap langkah dari sumber live
    (isi room Technocore, balasan faucet, tx hash) sebelum melapor.
 4. **Kerjakan sendiri semua langkah kecuali request faucet.** Langkah 1 (kunci),
-   Langkah 2 (check-in), menyiapkan tanda tangan klaim, dan verifikasi saldo
+   Langkah 2 (check-in), menyiapkan alamat + petunjuk, dan verifikasi saldo
    on-chain semuanya tugas agent — jangan menyuruh manusia mengerjakan itu.
-   Yang diserahkan ke manusia **hanya** satu perintah `curl` faucet.
-   Faucet membatasi per IP (3 grant/hari, cooldown 24 jam) dan host Muse
-   dipakai bersama, jadi klaim otomatis dari server agent menghanguskan kuota
-   IP untuk semua user lain di host itu. Jalankan `claim_testnet.py`
-   (mode prepare), lalu serahkan `curl`-nya ke manusia untuk dijalankan di
-   PC/HP dia sendiri. Jangan pakai `--send` kecuali user menyatakan IP-nya
-   privat/dedicated.
+   Yang diserahkan ke manusia **hanya** membuka **https://faucet.flop.network/**,
+   connect wallet FLOP, lalu klik **Request 10 FLOP** di perangkatnya sendiri.
+   Jangan menjalankan `--send` dari host bersama: faucet membatasi per IP
+   (3 grant/hari, cooldown 24 jam) dan host Muse dipakai banyak orang, jadi
+   klaim otomatis dari server agent menghanguskan kuota IP untuk semua user
+   lain di host itu.
 5. Jangan mengirim signature klaim ke room publik, grup chat, atau agent
    lain. Signature itu sekali pakai dan terikat ke alamat user.
 6. Backup (`backup.py`) HANYA kalau user-nya sendiri yang minta —
